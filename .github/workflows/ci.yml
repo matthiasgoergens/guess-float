@@ -1,0 +1,118 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request: {}
+
+env:
+  CARGO_TERM_COLOR: always
+  NIGHTLY_RUST_VERSION: nightly-2023-05-17
+
+jobs:
+  cargo-test:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.NIGHTLY_RUST_VERSION }}
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Run tests
+        run: cargo test --locked --all-targets
+
+  cargo-clippy:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.NIGHTLY_RUST_VERSION }}
+          components: clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Run Clippy linter
+        run: cargo clippy --all-features --all-targets -- -D warnings
+
+  cargo-fmt:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.NIGHTLY_RUST_VERSION }}
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Run fmt
+        run: cargo fmt --all --check
+
+  coverage:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    permissions:
+      issues: read
+      contents: write
+      packages: read
+      pull-requests: write
+      checks: write
+      pages: write
+      discussions: write
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.NIGHTLY_RUST_VERSION }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          # tarpaulin runs with different RUSTFLAGS, so we need a different cache.
+          prefix-key: "v0-rust-tarpaulin"
+
+      - name: "Install coverage tool: cargo tarpaulin"
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-tarpaulin
+
+      - name: Run tests for coverage
+        # skip-clean is there to make tarpaulin not re-build unnecessarily,
+        # so caching dependencies works.
+        run: cargo tarpaulin --skip-clean --engine llvm --locked --workspace --out Xml
+
+      - name: Coverage Comment
+        uses: ewjoachim/coverage-comment-action@v1.0.3
+        with:
+          COVERAGE_FILE: "cobertura.xml"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: 5monkeys/cobertura-action@master
+        with:
+          path: cobertura.xml
+          minimum_coverage: 0
+
+  cargo-udeps:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.NIGHTLY_RUST_VERSION }}
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Run cargo-udeps
+        uses: aig787/cargo-udeps-action@v1
+        with:
+          args: '--workspace --all-targets --all-features'
