@@ -53,6 +53,11 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
+      - name: "Install coverage tool: cargo tarpaulin"
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-fmt
+
       - name: Run fmt
         run: cargo fmt --all --check
 
