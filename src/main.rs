@@ -1,3 +1,5 @@
+#![deny(clippy::pedantic)]
+#![deny(clippy::cargo)]
 use num::integer::Average;
 use proptest::prelude::*;
 use std::cmp::Ordering;
