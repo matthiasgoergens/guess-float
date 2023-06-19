@@ -133,3 +133,39 @@ jobs:
 
       - name: Run Clippy linter
         run: cargo clippy --all-features --all-targets --quiet --message-format=json -- -D warnings | cargo-action-fmt
+
+  coverage-2:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    permissions:
+      issues: read
+      contents: write
+      packages: read
+      pull-requests: write
+      checks: write
+      pages: write
+      discussions: write
+    steps:
+      - uses: olix0r/cargo-action-fmt/setup@v2
+      - uses: actions/checkout@v3
+      - name: Install toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.NIGHTLY_RUST_VERSION }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          # tarpaulin runs with different RUSTFLAGS, so we need a different cache.
+          prefix-key: "v0-rust-tarpaulin"
+
+      - name: "Install coverage tool: cargo tarpaulin"
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-tarpaulin
+
+      - name: Run tests for coverage
+        # skip-clean is there to make tarpaulin not re-build unnecessarily,
+        # so caching dependencies works.
+        run: |
+          cargo tarpaulin --skip-clean --engine llvm --locked --workspace --out Json &&
+          cat tarpaulin-report.json | cargo-action-fmt
