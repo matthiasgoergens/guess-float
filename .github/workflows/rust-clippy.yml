@@ -41,7 +41,11 @@ jobs:
 
       - uses: taiki-e/cache-cargo-install-action@v1
         with:
-          tool: clippy-sarif,sarif-fmt
+          tool: clippy-sarif
+
+      - uses: taiki-e/cache-cargo-install-action@v1
+        with:
+          tool: sarif-fmt
 
       - name: Run rust-clippy
         run:
